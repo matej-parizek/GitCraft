@@ -1,4 +1,4 @@
-package cz.parizmat.gitcraft.feature.main.toolbar
+package cz.parizmat.gitcraft.feature.toolbar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,9 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import cz.parizmat.gitcraft.core.ui.components.Logo
-import io.github.lyxnx.compose.ui.tablericons.TablerIcons
-import io.github.lyxnx.compose.ui.tablericons.filled.*
-import io.github.lyxnx.compose.ui.tablericons.outline.Search
 
 @Composable
 fun GitCraftToolBar(

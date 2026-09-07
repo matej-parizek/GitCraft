@@ -1,4 +1,4 @@
-package cz.parizmat.gitcraft.feature.main.toolbar
+package cz.parizmat.gitcraft.feature.toolbar
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size

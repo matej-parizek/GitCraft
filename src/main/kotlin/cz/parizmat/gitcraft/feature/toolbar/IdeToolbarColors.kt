@@ -1,4 +1,4 @@
-package cz.parizmat.gitcraft.feature.main.toolbar
+package cz.parizmat.gitcraft.feature.toolbar
 
 import androidx.compose.ui.graphics.Color
 

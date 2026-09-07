@@ -6,14 +6,19 @@ import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.*
+import cz.parizmat.gitcraft.core.di.appModule
 import cz.parizmat.gitcraft.core.ui.theme.GitCraftTheme
 import cz.parizmat.gitcraft.feature.main.MainScreen
-import cz.parizmat.gitcraft.feature.main.toolbar.GitCraftToolBar
+import cz.parizmat.gitcraft.feature.toolbar.GitCraftToolBar
 import cz.parizmat.gitcraft.resources.Res
 import cz.parizmat.gitcraft.resources.gitcraft_logo
 import org.jetbrains.compose.resources.painterResource
+import org.koin.core.context.startKoin
 
 fun main() = application {
+    startKoin {
+        modules(appModule)
+    }
     val windowState = rememberWindowState()
 
     Window(
