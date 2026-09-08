@@ -1,5 +1,6 @@
 package cz.parizmat.gitcraft.core.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -22,6 +23,7 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = DarkTextSecondary,
 
     outline = DarkBorder,
+    outlineVariant = DarkBorder,
 
     error = GitDeleted,
 )
@@ -43,17 +45,18 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = LightTextSecondary,
 
     outline = LightBorder,
+    outlineVariant = LightBorder,
 
     error = GitDeleted,
 )
 
 @Composable
 fun GitCraftTheme(
-    darkTheme: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    val isDark = isSystemInDarkTheme()
     MaterialTheme(
-        colorScheme = if (darkTheme) {
+        colorScheme = if (isDark) {
             DarkColorScheme
         } else {
             LightColorScheme
