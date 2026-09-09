@@ -1,43 +1,32 @@
 package cz.parizmat.gitcraft.feature.main
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
-import cz.parizmat.gitcraft.resources.Res
-import cz.parizmat.gitcraft.resources.gitcraft_logo
-import org.jetbrains.compose.resources.painterResource
+import cz.parizmat.gitcraft.feature.changes.ChangesModel
+import cz.parizmat.gitcraft.feature.sidebar.ui.MainSidebar
+import cz.parizmat.gitcraft.feature.toolwindow.ui.TerminalToolWindow
+import cz.parizmat.gitcraft.feature.toolwindow.viewmodel.TerminalToolWindowViewModel
 
 @Composable
 fun MainScreen(
+    model: ChangesModel,
+    terminalViewModel: TerminalToolWindowViewModel,
+    onOpenRepository: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-    ) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter = painterResource(Res.drawable.gitcraft_logo),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(480.dp)
-                    .alpha(0.05f),
-            )
+    Row(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        MainSidebar(model = model, onOpenRepository = onOpenRepository, modifier = Modifier.width(200.dp).fillMaxHeight())
+        VerticalDivider(color = MaterialTheme.colorScheme.outline)
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+            MainContent(model = model, onOpenRepository = onOpenRepository, modifier = Modifier.weight(1f).fillMaxWidth())
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            TerminalToolWindow(terminalViewModel)
         }
     }
 }

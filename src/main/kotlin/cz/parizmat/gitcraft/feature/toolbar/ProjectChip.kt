@@ -1,4 +1,4 @@
-package cz.parizmat.gitcraft.feature.main.toolbar
+package cz.parizmat.gitcraft.feature.toolbar
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -23,7 +23,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cz.parizmat.gitcraft.core.ui.components.Logo
 import io.github.lyxnx.compose.ui.tablericons.TablerIcons
 import io.github.lyxnx.compose.ui.tablericons.filled.ChevronDown
 
