@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.ui.unit.dp
 import cz.parizmat.gitcraft.core.git.GitClient
 import cz.parizmat.gitcraft.feature.changes.ChangesModel
+import cz.parizmat.gitcraft.core.terminal.TerminalSessionFactory
+import cz.parizmat.gitcraft.core.terminal.completion.CommandHistoryCompletionProvider
+import cz.parizmat.gitcraft.core.terminal.completion.TerminalCompletionService
+import cz.parizmat.gitcraft.feature.toolwindow.viewmodel.TerminalToolWindowViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import org.koin.compose.koinInject
@@ -70,6 +74,12 @@ fun FrameWindowScope.GitCraftApp(
     val git: GitClient = koinInject()
     val scope = rememberCoroutineScope()
     val model = remember(git, scope) { ChangesModel(git, scope) }
+    val terminalFactory: TerminalSessionFactory = koinInject()
+    val completionService: TerminalCompletionService = koinInject()
+    val commandHistory: CommandHistoryCompletionProvider = koinInject()
+    val terminalViewModel = remember(terminalFactory, completionService, commandHistory, scope) {
+        TerminalToolWindowViewModel(terminalFactory, completionService, commandHistory)
+    }
     val state by model.state.collectAsState()
     var openDialog by remember { mutableStateOf(false) }
     var repositoryPath by remember { mutableStateOf(System.getProperty("gitcraft.repository", System.getProperty("user.dir"))) }
@@ -78,6 +88,10 @@ fun FrameWindowScope.GitCraftApp(
         model.open(repositoryPath)
         while (isActive) { delay(3000); model.refresh() }
     }
+    LaunchedEffect(state.repository) {
+        terminalViewModel.setRepository(state.repository)
+    }
+    DisposableEffect(terminalViewModel) { onDispose(terminalViewModel::close) }
     GitCraftTheme() {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -94,7 +108,7 @@ fun FrameWindowScope.GitCraftApp(
                 )
             }
 
-            MainScreen(model, onOpenRepository = { openDialog = true })
+            MainScreen(model, terminalViewModel, onOpenRepository = { openDialog = true })
         }
         if (openDialog) AlertDialog(
             onDismissRequest = { openDialog = false },

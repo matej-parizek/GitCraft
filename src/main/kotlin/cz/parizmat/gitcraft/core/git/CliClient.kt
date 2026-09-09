@@ -8,6 +8,7 @@ import cz.parizmat.gitcraft.core.domain.element.Branch
 import cz.parizmat.gitcraft.core.domain.element.Commit
 import cz.parizmat.gitcraft.core.domain.element.GitChange
 import cz.parizmat.gitcraft.core.domain.element.Repository
+import cz.parizmat.gitcraft.core.domain.element.RepositoryReferences
 import cz.parizmat.gitcraft.core.domain.element.FileDiff
 import cz.parizmat.gitcraft.core.domain.element.DiffRow
 import cz.parizmat.gitcraft.core.domain.element.DiffRowType
@@ -72,6 +73,19 @@ class CliClient(
 
     override suspend fun hasCommits(repository: Repository): Either<GitError, Boolean> =
         run(repository, listOf("rev-parse", "--verify", "--quiet", "HEAD"), setOf(0, 1)).map { it.exitCode == 0 }
+
+    override suspend fun references(repository: Repository): Either<GitError, RepositoryReferences> =
+        run(repository, listOf("for-each-ref", "--format=%(refname:short)", "refs/heads")).flatMap { local ->
+            run(repository, listOf("for-each-ref", "--format=%(refname:short)", "refs/remotes")).flatMap { remote ->
+                run(repository, listOf("for-each-ref", "--format=%(refname:short)", "refs/tags")).map { tags ->
+                    RepositoryReferences(
+                        localBranches = local.stdout.nonBlankLines(),
+                        remoteBranches = remote.stdout.nonBlankLines(),
+                        tags = tags.stdout.nonBlankLines(),
+                    )
+                }
+            }
+        }
 
     override suspend fun stageFile(repository: Repository, change: GitChange): Either<GitError, Unit> =
         mutate(repository, listOf("add", "-A", "--") + if (change.workingTreeStatus == FileStatus.RENAMED) paths(change) else listOf(change.path.toString()))
@@ -187,6 +201,8 @@ class CliClient(
     }
 
     private fun paths(change: GitChange): List<String> = listOfNotNull(change.path, change.oldPath).map(Path::toString).distinct()
+
+    private fun String.nonBlankLines(): List<String> = lineSequence().map(String::trim).filter(String::isNotEmpty).toList()
 
     private fun fileStatus(value: Char): FileStatus = when (value) {
         'M', 'T' -> FileStatus.MODIFIED

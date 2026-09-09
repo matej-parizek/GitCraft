@@ -7,6 +7,7 @@ import cz.parizmat.gitcraft.core.domain.element.Branch
 import cz.parizmat.gitcraft.core.domain.element.Commit
 import cz.parizmat.gitcraft.core.domain.element.GitChange
 import cz.parizmat.gitcraft.core.domain.element.Repository
+import cz.parizmat.gitcraft.core.domain.element.RepositoryReferences
 import cz.parizmat.gitcraft.core.domain.element.FileDiff
 import java.nio.file.Path
 
@@ -21,6 +22,7 @@ interface GitClient {
     suspend fun discardChanges(repository: Repository): Either<GitError, Unit>
     suspend fun commit(repository: Repository, message: String, amend: Boolean = false): Either<GitError, Unit>
     suspend fun hasCommits(repository: Repository): Either<GitError, Boolean>
+    suspend fun references(repository: Repository): Either<GitError, RepositoryReferences>
     suspend fun branches(repository: Repository): Either<GitError, List<Branch>>
     suspend fun commits(repository: Repository): Either<GitError, List<Commit>>
 }

@@ -37,6 +37,10 @@ dependencies {
     implementation("io.insert-koin:koin-core:4.1.1")
     implementation("io.insert-koin:koin-compose:4.1.1")
 
+    // Embedded PTY terminal (last release targeting JDK 21)
+    implementation("io.github.ketraterm:ketraterm-pty:0.1.3")
+    implementation("io.github.ketraterm:ketraterm-ui-swing:0.1.3")
+
     // Tests
     testImplementation(kotlin("test"))
 }
