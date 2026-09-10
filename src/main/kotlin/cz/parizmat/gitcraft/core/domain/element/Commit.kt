@@ -9,6 +9,7 @@ data class Commit(
     val authorEmail: String,
     val date: ZonedDateTime,
     val message: String,
+    val body: String = "",
     val parentsHashes: List<String>,
     val tags: List<String>,
     val branch: List<Branch>,

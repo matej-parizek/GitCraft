@@ -5,6 +5,7 @@ import cz.parizmat.gitcraft.core.domain.base.GitError
 import cz.parizmat.gitcraft.core.domain.base.ProcessError
 import cz.parizmat.gitcraft.core.domain.element.Branch
 import cz.parizmat.gitcraft.core.domain.element.Commit
+import cz.parizmat.gitcraft.core.domain.element.CommitDetails
 import cz.parizmat.gitcraft.core.domain.element.GitChange
 import cz.parizmat.gitcraft.core.domain.element.Repository
 import cz.parizmat.gitcraft.core.domain.element.RepositoryReferences
@@ -25,4 +26,6 @@ interface GitClient {
     suspend fun references(repository: Repository): Either<GitError, RepositoryReferences>
     suspend fun branches(repository: Repository): Either<GitError, List<Branch>>
     suspend fun commits(repository: Repository): Either<GitError, List<Commit>>
+    suspend fun commitDetails(repository: Repository, commit: Commit): Either<GitError, CommitDetails>
+    suspend fun commitDiff(repository: Repository, commit: Commit): Either<GitError, FileDiff>
 }

@@ -6,6 +6,8 @@ import cz.parizmat.gitcraft.core.domain.base.GitError
 import cz.parizmat.gitcraft.core.domain.base.ProcessError
 import cz.parizmat.gitcraft.core.domain.element.Branch
 import cz.parizmat.gitcraft.core.domain.element.Commit
+import cz.parizmat.gitcraft.core.domain.element.CommitDetails
+import cz.parizmat.gitcraft.core.domain.element.CommitFileChange
 import cz.parizmat.gitcraft.core.domain.element.GitChange
 import cz.parizmat.gitcraft.core.domain.element.Repository
 import cz.parizmat.gitcraft.core.domain.element.RepositoryReferences
@@ -17,6 +19,7 @@ import cz.parizmat.gitcraft.core.domain.command.CommandResult
 import arrow.core.left
 import arrow.core.right
 import java.nio.file.Path
+import java.time.ZonedDateTime
 
 class CliClient(
     private val commandExecutor: CommandExecutor,
@@ -187,6 +190,11 @@ class CliClient(
         val rows = text.take(MAX_DIFF_BYTES.toInt()).lineSequence().take(MAX_DIFF_ROWS).map { line ->
             val match = hunk.matchEntire(line)
             when {
+                line.startsWith("diff --git ") -> {
+                    inHunk = false
+                    DiffRow(DiffRowType.HEADER, line)
+                }
+                !inHunk && (line.startsWith("--- ") || line.startsWith("+++ ")) -> DiffRow(DiffRowType.HEADER, line)
                 match != null -> {
                     old = match.groupValues[1].toInt(); new = match.groupValues[2].toInt(); inHunk = true
                     DiffRow(DiffRowType.HEADER, line)
@@ -229,14 +237,113 @@ class CliClient(
     private fun failure(message: String): Either<GitError, Nothing> = GitError.CommandFailed("git", -1, message).left()
 
     override suspend fun branches(repository: Repository): Either<GitError, List<Branch>> {
-        return failure("Branch listing is not available yet.")
+        val format = "%(refname:short)%00%(refname)%00%(HEAD)%00%(objectname)%00%(upstream:track)%00"
+        return run(repository, listOf("for-each-ref", "--format=$format", "refs/heads", "refs/remotes")).map { result ->
+            result.stdout.split('\u0000').chunked(BRANCH_FIELD_COUNT).mapNotNull { fields ->
+                if (fields.size < BRANCH_FIELD_COUNT) return@mapNotNull null
+                val name = fields[0].trimStart('\r', '\n')
+                if (name.isBlank() || fields[1].endsWith("/HEAD")) return@mapNotNull null
+                val tracking = fields[4]
+                Branch(
+                    name = name,
+                    type = if (fields[1].startsWith("refs/remotes/")) cz.parizmat.gitcraft.core.domain.element.enums.BranchType.REMOTE
+                    else cz.parizmat.gitcraft.core.domain.element.enums.BranchType.LOCAL,
+                    isCurrent = fields[2].trim() == "*",
+                    isMerged = false,
+                    ahead = AHEAD_PATTERN.find(tracking)?.groupValues?.get(1)?.toIntOrNull() ?: 0,
+                    behind = BEHIND_PATTERN.find(tracking)?.groupValues?.get(1)?.toIntOrNull() ?: 0,
+                    lastCommit = fields[3],
+                )
+            }
+        }
     }
 
     override suspend fun commits(repository: Repository): Either<GitError, List<Commit>> {
-        return failure("Commit history is not available yet.")
+        val format = "%H%x00%h%x00%an%x00%ae%x00%aI%x00%P%x00%D%x00%s%x00%b%x00"
+        return run(
+            repository,
+            listOf("log", "--all", "--topo-order", "--date-order", "--decorate=full", "--max-count=$MAX_HISTORY_COMMITS", "--format=$format"),
+        ).map { result -> parseCommits(result.stdout) }
     }
 
+    override suspend fun commitDetails(repository: Repository, commit: Commit): Either<GitError, CommitDetails> =
+        run(
+            repository,
+            listOf("show", "--format=", "--numstat", "-z", "--no-renames", commit.hash),
+        ).map { result ->
+            val files = result.stdout.split('\u0000').mapNotNull { entry ->
+                val fields = entry.trimStart('\r', '\n').split('\t', limit = 3)
+                if (fields.size != 3 || fields[2].isBlank()) return@mapNotNull null
+                CommitFileChange(
+                    path = Path.of(fields[2]),
+                    additions = fields[0].toIntOrNull(),
+                    deletions = fields[1].toIntOrNull(),
+                )
+            }
+            CommitDetails(commit, files)
+        }
+
+    override suspend fun commitDiff(repository: Repository, commit: Commit): Either<GitError, FileDiff> =
+        run(
+            repository,
+            if (commit.parentsHashes.isEmpty()) {
+                listOf("show", "--root", "--format=", "--no-ext-diff", "--no-textconv", "--no-color", "--unified=3", commit.hash)
+            } else {
+                listOf("diff", "--no-ext-diff", "--no-textconv", "--no-color", "--unified=3", commit.parentsHashes.first(), commit.hash)
+            },
+        ).map { result -> parseDiff(Path.of(commit.shortHash), result.stdout) }
+
+    private fun parseCommits(output: String): List<Commit> = output.split('\u0000')
+        .chunked(COMMIT_FIELD_COUNT)
+        .mapNotNull { fields ->
+            if (fields.size < COMMIT_FIELD_COUNT) return@mapNotNull null
+            val hash = fields[0].trimStart('\r', '\n')
+            if (hash.isBlank()) return@mapNotNull null
+            val decorations = fields[6].split(',').map(String::trim).filter(String::isNotEmpty)
+            val branchRefs = decorations.mapNotNull(::parseDecoratedBranch).distinctBy { it.first }
+            Commit(
+                hash = hash,
+                shortHash = fields[1],
+                authorName = fields[2],
+                authorEmail = fields[3],
+                date = ZonedDateTime.parse(fields[4]),
+                parentsHashes = fields[5].split(' ').filter(String::isNotBlank),
+                tags = decorations.mapNotNull(::parseDecoratedTag),
+                branch = branchRefs.map { (name, type) ->
+                    Branch(
+                        name = name,
+                        type = type,
+                        isCurrent = decorations.any { it.startsWith("HEAD -> ") && parseDecoratedBranch(it)?.first == name },
+                        isMerged = false,
+                        ahead = 0,
+                        behind = 0,
+                        lastCommit = hash,
+                    )
+                },
+                message = fields[7],
+                body = fields[8].trim(),
+            )
+        }
+
+    private fun parseDecoratedBranch(decoration: String): Pair<String, cz.parizmat.gitcraft.core.domain.element.enums.BranchType>? {
+        val ref = decoration.removePrefix("HEAD -> ")
+        return when {
+            ref.startsWith("refs/heads/") -> ref.removePrefix("refs/heads/") to cz.parizmat.gitcraft.core.domain.element.enums.BranchType.LOCAL
+            ref.startsWith("refs/remotes/") -> ref.removePrefix("refs/remotes/") to cz.parizmat.gitcraft.core.domain.element.enums.BranchType.REMOTE
+            else -> null
+        }
+    }
+
+    private fun parseDecoratedTag(decoration: String): String? = decoration
+        .takeIf { it.startsWith("tag: refs/tags/") }
+        ?.removePrefix("tag: refs/tags/")
+
     private companion object {
+        val AHEAD_PATTERN = Regex("ahead (\\d+)")
+        val BEHIND_PATTERN = Regex("behind (\\d+)")
+        const val BRANCH_FIELD_COUNT = 5
+        const val COMMIT_FIELD_COUNT = 9
+        const val MAX_HISTORY_COMMITS = 500
         const val MAX_DIFF_BYTES = 1_000_000L
         const val MAX_DIFF_ROWS = 5_000
 
