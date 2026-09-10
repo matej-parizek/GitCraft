@@ -9,17 +9,20 @@ import androidx.compose.ui.unit.dp
 import cz.parizmat.gitcraft.feature.changes.ChangesModel
 import cz.parizmat.gitcraft.feature.changes.ChangesScreen
 import cz.parizmat.gitcraft.feature.changes.GuidedInfo
+import cz.parizmat.gitcraft.feature.history.ui.HistoryScreen
+import cz.parizmat.gitcraft.feature.history.viewmodel.HistoryViewModel
 import cz.parizmat.gitcraft.feature.sidebar.domain.enums.Destinations
 import cz.parizmat.gitcraft.feature.sidebar.ui.SidebarModelView
 import org.koin.compose.koinInject
 
 @Composable
-fun MainContent(model: ChangesModel, onOpenRepository: () -> Unit, modifier: Modifier, view: SidebarModelView = koinInject()) {
+fun MainContent(model: ChangesModel, historyViewModel: HistoryViewModel, onOpenRepository: () -> Unit, modifier: Modifier, view: SidebarModelView = koinInject()) {
     val navigation by view.state.collectAsState()
     val state by model.state.collectAsState()
     Box(modifier) {
         when (navigation.currentDestination) {
             Destinations.CHANGES -> ChangesScreen(model, onOpenRepository)
+            Destinations.HISTORY -> HistoryScreen(historyViewModel, onOpenRepository)
             Destinations.REPOSITORY -> Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Repository", style = MaterialTheme.typography.headlineMedium)
                 Text(state.repository?.rootPath?.toString() ?: "No repository open", style = MaterialTheme.typography.bodyMedium)

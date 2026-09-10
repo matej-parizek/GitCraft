@@ -164,6 +164,40 @@ class CliClientTest {
         assertEquals(conflict, Files.readString(file))
     }
 
+    @Test fun loadsBranchAwareHistoryAndCommitDetails() = runBlocking {
+        val repository = fixture()
+        val executor = CommandExecutor()
+        Files.writeString(repository.rootPath.resolve("README.md"), "initial\n")
+        success(client.stageAll(repository))
+        success(client.commit(repository, "Initial", false))
+        success(executor.execute(repository.rootPath, listOf("checkout", "-b", "feature/history")))
+        Files.writeString(repository.rootPath.resolve("README.md"), "initial\nhistory\n")
+        Files.writeString(repository.rootPath.resolve("History.kt"), "class History\n")
+        success(client.stageAll(repository))
+        success(client.commit(repository, "Add history screen", false))
+        success(executor.execute(repository.rootPath, listOf("tag", "v0.2.0")))
+
+        val branches = success(client.branches(repository))
+        assertTrue(branches.any { it.name == "feature/history" && it.isCurrent })
+        val history = success(client.commits(repository))
+        val latest = history.first()
+        assertEquals("Add history screen", latest.message)
+        assertTrue(latest.branch.any { it.name == "feature/history" && it.isCurrent })
+        assertEquals(listOf("v0.2.0"), latest.tags)
+        assertEquals("Initial", history.last().message)
+
+        val details = success(client.commitDetails(repository, latest))
+        assertEquals(2, details.files.size)
+        assertEquals(2, details.additions)
+        assertEquals(0, details.deletions)
+
+        val diff = success(client.commitDiff(repository, latest))
+        assertTrue(diff.rows.any { it.type == DiffRowType.ADDED && it.text == "history" })
+        assertTrue(diff.rows.any { it.type == DiffRowType.ADDED && it.text == "class History" })
+        assertTrue(diff.rows.any { it.type == DiffRowType.HEADER && it.text == "--- a/README.md" })
+        assertTrue(diff.rows.any { it.type == DiffRowType.HEADER && it.text == "+++ b/README.md" })
+    }
+
     private suspend fun fixture(): Repository {
         val root = Files.createTempDirectory("gitcraft-test-")
         val executor = CommandExecutor()

@@ -24,6 +24,7 @@ import androidx.compose.ui.window.*
 import cz.parizmat.gitcraft.core.di.appModule
 import cz.parizmat.gitcraft.core.ui.theme.GitCraftTheme
 import cz.parizmat.gitcraft.feature.main.MainScreen
+import cz.parizmat.gitcraft.feature.history.viewmodel.HistoryViewModel
 import cz.parizmat.gitcraft.feature.toolbar.GitCraftToolBar
 import cz.parizmat.gitcraft.resources.Res
 import cz.parizmat.gitcraft.resources.gitcraft_logo
@@ -74,6 +75,7 @@ fun FrameWindowScope.GitCraftApp(
     val git: GitClient = koinInject()
     val scope = rememberCoroutineScope()
     val model = remember(git, scope) { ChangesModel(git, scope) }
+    val historyViewModel = remember(git, scope) { HistoryViewModel(git, scope) }
     val terminalFactory: TerminalSessionFactory = koinInject()
     val completionService: TerminalCompletionService = koinInject()
     val commandHistory: CommandHistoryCompletionProvider = koinInject()
@@ -90,6 +92,7 @@ fun FrameWindowScope.GitCraftApp(
     }
     LaunchedEffect(state.repository) {
         terminalViewModel.setRepository(state.repository)
+        historyViewModel.setRepository(state.repository)
     }
     DisposableEffect(terminalViewModel) { onDispose(terminalViewModel::close) }
     GitCraftTheme() {
@@ -108,7 +111,7 @@ fun FrameWindowScope.GitCraftApp(
                 )
             }
 
-            MainScreen(model, terminalViewModel, onOpenRepository = { openDialog = true })
+            MainScreen(model, historyViewModel, terminalViewModel, onOpenRepository = { openDialog = true })
         }
         if (openDialog) AlertDialog(
             onDismissRequest = { openDialog = false },

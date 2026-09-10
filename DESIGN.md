@@ -29,6 +29,11 @@ Base spacing 4dp, steps 4/8/12/16/20/24/32/40/48. Desktop window defaults to 128
 - GuidedInfo: compact secondary copy; errors and success are dismissible and do not replace work areas.
 - TerminalToolWindow: 36dp Material header, draggable top resize handle, repository-relative working-directory label, restart/collapse actions, and a KetraTerm Swing canvas. Collapsed state retains a compact reopen strip. Empty state explains that a repository must be opened.
 - Terminal completion popup: KetraTerm-owned Swing overlay positioned at the active cursor. Primary completion text, semantic type label, and one-line description; selected row follows terminal keyboard focus.
+- HistoryBranchFilter: compact local/remote/tag tree used to filter the visible commit graph; current and selected refs remain distinguishable without relying on color alone.
+- CommitHistoryList: virtualized 56dp rows with a fixed graph lane, subject, short hash, ref labels, author and date. Loading, empty, filtered-empty, error and selected states stay inside the list surface.
+- CommitGraph: precomputed branch lanes rendered per visible row; colored lines are reinforced by ref labels and merge topology so meaning is not color-only.
+- CommitDetailsPanel: 320dp inspector for the selected commit with author, date, parents, changed-file statistics, full message and a primary Open diff action when available. The action navigates within the History work area; commit changes never open in a popup or dialog.
+- CommitDiffView: full History work-area editor surface with the selected commit's short hash in the top toolbar, a named Back to history action, old/new line-number gutters, change markers, monospaced content, shared horizontal scrolling, and bounded lazy rows. Loading, binary, truncated, error and empty states remain inside this surface.
 
 ## 6. Motion & interaction
 
@@ -38,10 +43,12 @@ Terminal focus remains inside KetraTerm. Up/Down select a visible suggestion, Ta
 
 The completion popup is a non-focusable owned window so it may cross the `SwingPanel` boundary without being clipped. It opens below the caret when the screen has room; otherwise above it. If neither side fits completely, it uses the larger side and clamps to the current screen's usable bounds. Repositioning is immediate and has no decorative animation.
 
+History selection follows the beui.dev virtualized-table mechanism: rows are lazily composed with stable commit-hash keys and a small overscan owned by Compose. Search and ref filters update immediately without decorative motion. Up/Down move selection, Enter keeps the selected commit in view, Ctrl+F focuses search, and R refreshes when search is not focused. Detail loading never blocks scrolling or replaces a newer selection. Open diff replaces only the History work area; Back to history and Esc restore the same History state and selection.
+
 ## 7. Depth & surface
 
 Borders-only workspace with subtle tonal separation. One-dp outline dividers; no gradients, floating dashboard cards or decorative shadows. Material dialogs may use their standard elevation.
 
 ## 8. Accessibility constraints & accepted debt
 
-Target readable desktop contrast, visible focus, keyboard navigation, labeled fields and actions. Destructive actions require explicit confirmation. Lists show status text in addition to color. Native desktop app: browser/mobile/Lighthouse gates do not apply. Screens outside Changes are explicitly marked as not implemented in this phase. Full screen-reader compatibility depends on Compose Desktop accessibility support and must not be claimed from screenshots.
+Target readable desktop contrast, visible focus, keyboard navigation, labeled fields and actions. Destructive actions require explicit confirmation. Lists show status text in addition to color. Native desktop app: browser/mobile/Lighthouse gates do not apply. Repository, Branches, Stashes, Remotes and Settings remain explicitly marked as not implemented; Changes and History are functional. Full screen-reader compatibility depends on Compose Desktop accessibility support and must not be claimed from screenshots.

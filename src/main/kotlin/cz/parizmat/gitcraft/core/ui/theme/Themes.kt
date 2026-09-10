@@ -52,11 +52,11 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun GitCraftTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    val isDark = isSystemInDarkTheme()
     MaterialTheme(
-        colorScheme = if (isDark) {
+        colorScheme = if (darkTheme) {
             DarkColorScheme
         } else {
             LightColorScheme
